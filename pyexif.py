@@ -21,7 +21,7 @@ http://www.sno.phy.queensu.ca/~phil/exiftool/
 """
 
 
-def _runproc(cmd):
+def _runproc(cmd, fpath=None):
     if not _EXIFTOOL_INSTALLED:
         _install_exiftool_info()
         raise RuntimeError("Running this class requires that exiftool is installed")
@@ -31,6 +31,16 @@ def _runproc(cmd):
     proc.wait()
     err = proc.stderr.read()
     if err:
+        # See if it's a damaged EXIF directory. If so, fix it and re-try
+        if err.startswith("Warning: Bad ExifIFD directory") and fpath is not None:
+            fixcmd = """exiftool -overwrite_original_in_place -all= -tagsfromfile @ -all:all -unsafe "{fpath}" """.format(**locals())
+            try:
+                _runproc(fixcmd)
+            except RuntimeError:
+                # It will always raise a warning, so ignore it
+                pass
+            # Retry
+            return _runproc(cmd, fpath)
         raise RuntimeError(err)
     else:
         return proc.stdout.read()
@@ -56,7 +66,7 @@ class ExifEditor(object):
         if not save_backup:
             self._optExpr = "-overwrite_original_in_place"
         else:
-            self._optExpr = "-overwrite_original_in_place"
+            self._optExpr = ""
         self.photo = photo
         # Tuples of (degrees, mirrored)
         self.rotations = {
@@ -89,33 +99,40 @@ class ExifEditor(object):
         self._rotate(90 * num)
 
 
+    def getOrientation(self):
+        """Returns the current Orientation tag number."""
+        return self.getTag("Orientation#")
+
+
     def _rotate(self, deg):
-        currOrient = self.getTag("Orientation#")
+        currOrient = self.getOrientation()
         currRot, currMirror = self.rotations[currOrient]
         dummy, newRot = divmod(currRot + deg, 360)
         newOrient = self.invertedRotations[(newRot, currMirror)]
-        self._setOrientation(newOrient)
+        self.setOrientation(newOrient)
 
 
     def mirrorVertically(self):
-        currOrient = self.getTag("Orientation#")
+        """Flips the image top to bottom."""
+        currOrient = self.getOrientation()
         currRot, currMirror = self.rotations[currOrient]
         newMirror = currMirror ^ 1
         newOrient = self.invertedRotations[(currRot, newMirror)]
-        self._setOrientation(newOrient)
+        self.setOrientation(newOrient)
 
 
     def mirrorHorizontally(self):
+        """Flips the image left to right."""
         # First, rotate 180
         self.rotateCW(2)
-        currOrient = self.getTag("Orientation#")
+        currOrient = self.getOrientation()
         currRot, currMirror = self.rotations[currOrient]
         newMirror = currMirror ^ 1
         newOrient = self.invertedRotations[(currRot, newMirror)]
-        self._setOrientation(newOrient)
+        self.setOrientation(newOrient)
 
 
-    def _setOrientation(self, val):
+    def setOrientation(self, val):
         """Orientation codes:
                Rot    Img
             1:   0    Normal
@@ -128,21 +145,26 @@ class ExifEditor(object):
             8: -90    Normal
         """
         cmd = """exiftool {self._optExpr} -Orientation#='{val}' "{self.photo}" """.format(**locals())
-        _runproc(cmd)
+        _runproc(cmd, self.photo)
 
 
     def addKeyword(self, kw):
+        """Add the passed string to the image's keyword tag, preserving existing keywords."""
         self.addKeywords([kw])
 
 
     def addKeywords(self, kws):
+        """Add the passed list of strings to the image's keyword tag, preserving
+        existing keywords.
+        """
         kws = ["-iptc:keywords+={0}".format(kw) for kw in kws]
         kwopt = " ".join(kws)
         cmd = """exiftool {self._optExpr} {kwopt} "{self.photo}" """.format(**locals())
-        _runproc(cmd)
+        _runproc(cmd, self.photo)
 
 
     def getKeywords(self):
+        """Returns the current keywords for the image as a list."""
         ret = self.getTag("Keywords")
         if not ret:
             return []
@@ -152,11 +174,15 @@ class ExifEditor(object):
 
 
     def setKeywords(self, kws):
+        """Sets the image's keyword list to the passed list of strings. Any existing
+        keywords are overwritten.
+        """
         self.clearKeywords()
         self.addKeywords(kws)
 
 
     def clearKeywords(self):
+        """Removes all keywords from the image."""
         try:
             self.setTag("Keywords", "")
         except RuntimeError as e:
@@ -165,20 +191,26 @@ class ExifEditor(object):
 
 
     def getTag(self, tag):
+        """Returns the value of the specified tag, or None if the tag does
+        not exist.
+        """
         cmd = """exiftool -j -{tag} "{self.photo}" """.format(**locals())
-        out = _runproc(cmd)
+        out = _runproc(cmd, self.photo)
         info = json.loads(out)[0]
         ret = info.get(tag)
         return ret
 
 
     def setTag(self, tag, val):
+        """Sets the specified tag to the passed value. You can set multiple values
+        for the same tag by passing those values in as a list.
+        """
         if not isinstance(val, (list, tuple)):
             val = [val]
         vallist = ["-{0}={1}".format(tag, v) for v in val]
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
-        out = _runproc(cmd)
+        out = _runproc(cmd, self.photo)
 
 
     def setOriginalDateTime(self, dttm=None):
@@ -198,6 +230,7 @@ class ExifEditor(object):
 
 
     def _setDateTimeField(self, fld, dttm):
+        """Generic setter for datetime values."""
         if dttm is None:
             dttm = datetime.datetime.now()
         # Convert to string format if needed
@@ -206,10 +239,13 @@ class ExifEditor(object):
         else:
             dtstring = self._formatDateTime(dttm)
         cmd = """exiftool {self._optExpr} -{fld}='{dtstring}' "{self.photo}" """.format(**locals())
-        _runproc(cmd)
+        _runproc(cmd, self.photo)
 
 
     def _formatDateTime(self, dt):
+        """Accepts a string representation of a date or datetime,
+        and returns a string correctly formatted for EXIF datetimes.
+        """
         if self._datePattern.match(dt):
             # Add the time portion
             return "{0} 00:00:00".format(dt)
@@ -218,7 +254,6 @@ class ExifEditor(object):
             return dt
         else:
             raise ValueError("Incorrect datetime value '{0}' received".format(dt))
-
 
 
 def usage():
