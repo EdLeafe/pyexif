@@ -44,9 +44,7 @@ except RuntimeError as e:
     # If the tool is installed, the error should be 'File not found'.
     # Otherwise, assume it isn't installed.
     err = "{0}".format(e).strip()
-
-    print "ERR", err
-    if err != "File not found: some_dummy_name.jpg":
+    if "File not found:" not in err:
         _EXIFTOOL_INSTALLED = False
         _install_exiftool_info()
 
