@@ -1,0 +1,6 @@
+NOTE: This module requires that the "exiftool" command-line tool is
+installed on the system running pyexif. It is freely available at: 
+http://www.sno.phy.queensu.ca/~phil/exiftool/
+
+If exiftool is not installed, a warning message will be printed to
+stdout, and the module will not work.
