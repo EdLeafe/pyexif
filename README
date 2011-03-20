@@ -1,0 +1,54 @@
+Images can contain EXIF metadata that describes information about the
+image, such as creation date, the device used to create the image,
+exposure data, GPS geotagging, keywords, compression, flash info, and
+lots more. In addition to the standard tags defined by camera
+manufacturers, you can also add your own tags with information as
+key/value pairs.
+
+NOTE: This module requires that the "exiftool" command-line tool is
+installed on the system running pyexif. It is freely available at: 
+http://www.sno.phy.queensu.ca/~phil/exiftool/
+
+If exiftool is not installed, a warning message will be printed to
+stdout, and the module will not work.
+
+
+Common Actions
+    Please note that any of the write operations *immediately* affect
+    the image file. Please operate on a copy of the original.
+
+
+Keyword Manipulation
+====================
+    getKeywords(): returns a list of all keywords.
+    setKeywords(list of keywords): accepts a list of strings, and sets
+        the keywords for that image to that list. Any existing keywords
+        are overwritten.
+    addKeyword(word): Appends the passed keyword to the image's
+        keywords.
+    addKeyword(list of words): Convenience method for adding several
+        keywords at once.
+    clearKeywords(): Removes all current keywords.
+
+Date Functions
+==============
+    setOriginalDateTime(dttm): Sets the image's original datetime to the
+        passed datetime value.
+    setModificationDateTime(dttm): Sets the image's modification
+        datetime to the passed datetime value.
+
+
+Image Manipulation
+==================
+    rotateCW(num=1): Rotates the image clockwise for 'num' 90-degree
+        steps.
+    rotateCCW(num=1): Rotates the image counter-clockwise for 'num'
+        90-degree steps.
+    mirrorVertically(): Flips the image top to bottom.
+    mirrorHorizontally: Flips the image left to right.
+
+Tag Manipulation
+================
+    getTag(tag): returns the current value of the specified tag, or None
+        if the tag does not exist.
+    setTag(tag, val): sets the specified tag to the specified value.
