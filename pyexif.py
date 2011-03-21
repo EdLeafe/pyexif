@@ -116,6 +116,8 @@ class ExifEditor(object):
 
     def mirrorVertically(self):
         """Flips the image top to bottom."""
+        # First, rotate 180
+        self.rotateCW(2)
         currOrient = self.getOrientation()
         currRot, currMirror = self.rotations[currOrient]
         newMirror = currMirror ^ 1
@@ -125,8 +127,6 @@ class ExifEditor(object):
 
     def mirrorHorizontally(self):
         """Flips the image left to right."""
-        # First, rotate 180
-        self.rotateCW(2)
         currOrient = self.getOrientation()
         currRot, currMirror = self.rotations[currOrient]
         newMirror = currMirror ^ 1
@@ -192,7 +192,7 @@ class ExifEditor(object):
         """Returns the value of the specified tag, or the default value
         if the tag does not exist.
         """
-        cmd = """exiftool -j -{tag} "{self.photo}" """.format(**locals())
+        cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" -{tag} "{self.photo}" """.format(**locals())
         out = _runproc(cmd, self.photo)
         info = json.loads(out)[0]
         ret = info.get(tag, default)
@@ -218,12 +218,24 @@ class ExifEditor(object):
                 raise
 
 
+    def getOriginalDateTime(self):
+        """Get the image's original date/time value (i.e., when the picture
+        was 'taken').
+        """
+        self._getDateTimeField("DateTimeOriginal")
+
+
     def setOriginalDateTime(self, dttm=None):
         """Set the image's original date/time (i.e., when the picture
         was 'taken') to the passed value. If no value is passed, set
         it to the current datetime.
         """
-        self._setDateTimeField("DateTimeOriginal", dttm)
+        return self._setDateTimeField("DateTimeOriginal", dttm)
+
+
+    def getModificationDateTime(self):
+        """Get the image's modification date/time value."""
+        return self._getDateTimeField("FileModifyDate")
 
 
     def setModificationDateTime(self, dttm=None):
@@ -232,6 +244,20 @@ class ExifEditor(object):
         like 'touch'.
         """
         self._setDateTimeField("FileModifyDate", dttm)
+
+
+    def _getDateTimeField(self, fld):
+        """Generic getter for datetime values."""
+        # Convert to string format if needed
+#         if isinstance(dttm, (datetime.datetime, datetime.date)):
+#             dtstring = dttm.strftime("%Y:%m:%d %H:%M:%S")
+#         else:
+#             dtstring = self._formatDateTime(dttm)
+        ret = self.getTag(fld)
+        if ret is not None:
+            # It will be a string in exif std datetime format
+            ret = datetime.datetime.strptime(ret, "%Y:%m:%d %H:%M:%S")
+        return ret
 
 
     def _setDateTimeField(self, fld, dttm):
