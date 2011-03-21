@@ -84,8 +84,10 @@ class ExifEditor(object):
                 180: (3, 4), 270: (7, 8)}
         self.mirrorStates = (2, 4, 5, 7)
         # DateTime patterns
-        self._datePattern = re.compile("\d{4}:[01]\d:[0-3]\d$")
-        self._dateTimePattern = re.compile("\d{4}:[01]\d:[0-3]\d [0-2]\d:[0-5]\d:[0-5]\d$")
+        self._datePattern = re.compile(r"\d{4}:[01]\d:[0-3]\d$")
+        self._dateTimePattern = re.compile(r"\d{4}:[01]\d:[0-3]\d [0-2]\d:[0-5]\d:[0-5]\d$")
+        self._badTagPat = re.compile(r"Warning: Tag '[^']+' does not exist")
+
         super(ExifEditor, self).__init__()
 
 
@@ -101,7 +103,7 @@ class ExifEditor(object):
 
     def getOrientation(self):
         """Returns the current Orientation tag number."""
-        return self.getTag("Orientation#")
+        return self.getTag("Orientation#", 1)
 
 
     def _rotate(self, deg):
@@ -157,7 +159,7 @@ class ExifEditor(object):
         """Add the passed list of strings to the image's keyword tag, preserving
         existing keywords.
         """
-        kws = ["-iptc:keywords+={0}".format(kw) for kw in kws]
+        kws = ["-iptc:keywords+={0}".format(kw.replace(" ", r"\ ")) for kw in kws]
         kwopt = " ".join(kws)
         cmd = """exiftool {self._optExpr} {kwopt} "{self.photo}" """.format(**locals())
         _runproc(cmd, self.photo)
@@ -183,21 +185,17 @@ class ExifEditor(object):
 
     def clearKeywords(self):
         """Removes all keywords from the image."""
-        try:
-            self.setTag("Keywords", "")
-        except RuntimeError as e:
-            # Returns an errror if there were no keywords
-            print e
+        self.setTag("Keywords", "")
 
 
-    def getTag(self, tag):
-        """Returns the value of the specified tag, or None if the tag does
-        not exist.
+    def getTag(self, tag, default=None):
+        """Returns the value of the specified tag, or the default value
+        if the tag does not exist.
         """
         cmd = """exiftool -j -{tag} "{self.photo}" """.format(**locals())
         out = _runproc(cmd, self.photo)
         info = json.loads(out)[0]
-        ret = info.get(tag)
+        ret = info.get(tag, default)
         return ret
 
 
@@ -210,7 +208,14 @@ class ExifEditor(object):
         vallist = ["-{0}={1}".format(tag, v) for v in val]
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
-        out = _runproc(cmd, self.photo)
+        try:
+            out = _runproc(cmd, self.photo)
+        except RuntimeError as e:
+            err = "{0}".format(e).strip()
+            if self._badTagPat.match(err):
+                print "Tag '{tag}' is invalid.".format(**locals())
+            else:
+                raise
 
 
     def setOriginalDateTime(self, dttm=None):
