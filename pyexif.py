@@ -91,14 +91,14 @@ class ExifEditor(object):
         super(ExifEditor, self).__init__()
 
 
-    def rotateCCW(self, num=1):
-        """Rotate left in 90 degree incrementss"""
-        self._rotate(-90 * num)
+    def rotateCCW(self, num=1, calc_only=False):
+        """Rotate left in 90 degree increments"""
+        return self._rotate(-90 * num, calc_only)
 
 
-    def rotateCW(self, num=1):
-        """Rotate right in 90 degree incrementss"""
-        self._rotate(90 * num)
+    def rotateCW(self, num=1, calc_only=False):
+        """Rotate right in 90 degree increments"""
+        return self._rotate(90 * num, calc_only)
 
 
     def getOrientation(self):
@@ -106,19 +106,21 @@ class ExifEditor(object):
         return self.getTag("Orientation#", 1)
 
 
-    def _rotate(self, deg):
+    def _rotate(self, deg, calc_only=False):
         currOrient = self.getOrientation()
         currRot, currMirror = self.rotations[currOrient]
         dummy, newRot = divmod(currRot + deg, 360)
         newOrient = self.invertedRotations[(newRot, currMirror)]
+        if calc_only:
+            return newOrient
         self.setOrientation(newOrient)
 
 
     def mirrorVertically(self):
         """Flips the image top to bottom."""
         # First, rotate 180
-        self.rotateCW(2)
-        currOrient = self.getOrientation()
+        currOrient = self.rotateCW(2, calc_only=True)
+#         currOrient = self.getOrientation()
         currRot, currMirror = self.rotations[currOrient]
         newMirror = currMirror ^ 1
         newOrient = self.invertedRotations[(currRot, newMirror)]

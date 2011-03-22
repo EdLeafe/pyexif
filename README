@@ -32,8 +32,12 @@ Keyword Manipulation
 
 Date Functions
 ==============
+    getOriginalDateTime(): Returns the datetime for the image's creation,
+		or None if not set.
     setOriginalDateTime(dttm): Sets the image's original datetime to the
         passed datetime value.
+    getModificationDateTime(): Returns the modification datetime for the
+		image, or None if not set.
     setModificationDateTime(dttm): Sets the image's modification
         datetime to the passed datetime value.
 

@@ -6,7 +6,8 @@ It does its work mainly though the command-line "exiftool", which is required fo
 """
 
 setup(
-    name="pyexif", version="0.2",
+    name="pyexif",
+	version="0.2.1",
     url="https://leafe.com/pyexif",
     author="Ed Leafe",
     author_email="ed@leafe.com",
