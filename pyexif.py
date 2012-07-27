@@ -194,7 +194,7 @@ class ExifEditor(object):
         """Returns the value of the specified tag, or the default value
         if the tag does not exist.
         """
-        cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" -{tag} "{self.photo}" """.format(**locals())
+        cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" --{tag} "{self.photo}" """.format(**locals())
         out = _runproc(cmd, self.photo)
         info = json.loads(out)[0]
         ret = info.get(tag, default)
