@@ -220,7 +220,7 @@ class ExifEditor(object):
         """Get the image's original date/time value (i.e., when the picture
         was 'taken').
         """
-        self._getDateTimeField("DateTimeOriginal")
+        return self._getDateTimeField("DateTimeOriginal")
 
 
     def setOriginalDateTime(self, dttm=None):
@@ -228,7 +228,7 @@ class ExifEditor(object):
         was 'taken') to the passed value. If no value is passed, set
         it to the current datetime.
         """
-        return self._setDateTimeField("DateTimeOriginal", dttm)
+        self._setDateTimeField("DateTimeOriginal", dttm)
 
 
     def getModificationDateTime(self):
