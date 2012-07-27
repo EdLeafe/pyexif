@@ -69,7 +69,7 @@ class ExifEditor(object):
             self._optExpr = ""
         self.photo = photo
         # Tuples of (degrees, mirrored)
-        self.rotations = {
+        self._rotations = {
                 0: (0, 0),
                 1: (0, 0),
                 2: (0, 1),
@@ -79,10 +79,7 @@ class ExifEditor(object):
                 6: (90, 0),
                 7: (270, 1),
                 8: (270, 0)}
-        self.invertedRotations = dict([[v, k] for k, v in self.rotations.items()])
-        self.rotationStates = {0: (1, 2), 90: (5, 6),
-                180: (3, 4), 270: (7, 8)}
-        self.mirrorStates = (2, 4, 5, 7)
+        self._invertedRotations = dict([[v, k] for k, v in self._rotations.items()])
         # DateTime patterns
         self._datePattern = re.compile(r"\d{4}:[01]\d:[0-3]\d$")
         self._dateTimePattern = re.compile(r"\d{4}:[01]\d:[0-3]\d [0-2]\d:[0-5]\d:[0-5]\d$")
@@ -108,9 +105,9 @@ class ExifEditor(object):
 
     def _rotate(self, deg, calc_only=False):
         currOrient = self.getOrientation()
-        currRot, currMirror = self.rotations[currOrient]
+        currRot, currMirror = self._rotations[currOrient]
         dummy, newRot = divmod(currRot + deg, 360)
-        newOrient = self.invertedRotations[(newRot, currMirror)]
+        newOrient = self._invertedRotations[(newRot, currMirror)]
         if calc_only:
             return newOrient
         self.setOrientation(newOrient)
@@ -120,19 +117,18 @@ class ExifEditor(object):
         """Flips the image top to bottom."""
         # First, rotate 180
         currOrient = self.rotateCW(2, calc_only=True)
-#         currOrient = self.getOrientation()
-        currRot, currMirror = self.rotations[currOrient]
+        currRot, currMirror = self._rotations[currOrient]
         newMirror = currMirror ^ 1
-        newOrient = self.invertedRotations[(currRot, newMirror)]
+        newOrient = self._invertedRotations[(currRot, newMirror)]
         self.setOrientation(newOrient)
 
 
     def mirrorHorizontally(self):
         """Flips the image left to right."""
         currOrient = self.getOrientation()
-        currRot, currMirror = self.rotations[currOrient]
+        currRot, currMirror = self._rotations[currOrient]
         newMirror = currMirror ^ 1
-        newOrient = self.invertedRotations[(currRot, newMirror)]
+        newOrient = self._invertedRotations[(currRot, newMirror)]
         self.setOrientation(newOrient)
 
 
