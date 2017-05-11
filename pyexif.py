@@ -10,7 +10,7 @@ import sys
 
 
 def _install_exiftool_info():
-    print  """
+    print("""
 Cannot find 'exiftool'.
 
 The ExifEditor class requires that the 'exiftool' command-line
@@ -18,7 +18,7 @@ utility is installed in order to work. Information on obtaining
 this excellent utility can be found at:
 
 http://www.sno.phy.queensu.ca/~phil/exiftool/
-"""
+""")
 
 
 def _runproc(cmd, fpath=None):
@@ -32,7 +32,7 @@ def _runproc(cmd, fpath=None):
     err = proc.stderr.read()
     if err:
         # See if it's a damaged EXIF directory. If so, fix it and re-try
-        if err.startswith("Warning: Bad ExifIFD directory") and fpath is not None:
+        if err.startswith(b"Warning: Bad ExifIFD directory") and fpath is not None:
             fixcmd = """exiftool -overwrite_original_in_place -all= -tagsfromfile @ -all:all -unsafe "{fpath}" """.format(**locals())
             try:
                 _runproc(fixcmd)
@@ -211,7 +211,7 @@ class ExifEditor(object):
         except RuntimeError as e:
             err = "{0}".format(e).strip()
             if self._badTagPat.match(err):
-                print "Tag '{tag}' is invalid.".format(**locals())
+                print("Tag '{tag}' is invalid.".format(**locals()))
             else:
                 raise
 
@@ -286,7 +286,7 @@ class ExifEditor(object):
 
 
 def usage():
-    print """
+    print("""
 To use this module, create an instance of the ExifEditor class, passing
 in a path to the image to be handled. You may also pass in whether you 
 want the program to automatically keep a backup of your original photo
@@ -295,7 +295,7 @@ as the original, with "_ORIGINAL" appended to the file name.
 
 Once you have an editor instance, you call its methods to get information
 about the image, or to modify the image's metadata.
-"""
+""")
 
 
 if __name__ == "__main__":
