@@ -5,6 +5,7 @@ import datetime
 import json
 import os
 import re
+import six
 import subprocess
 import sys
 
@@ -24,7 +25,8 @@ http://www.sno.phy.queensu.ca/~phil/exiftool/
 def _runproc(cmd, fpath=None):
     if not _EXIFTOOL_INSTALLED:
         _install_exiftool_info()
-        raise RuntimeError("Running this class requires that exiftool is installed")
+        msg = "Running this class requires that exiftool is installed"
+        raise RuntimeError(msg)
     pipe = subprocess.PIPE
     proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
             stderr=pipe, close_fds=True)
@@ -32,8 +34,11 @@ def _runproc(cmd, fpath=None):
     err = proc.stderr.read()
     if err:
         # See if it's a damaged EXIF directory. If so, fix it and re-try
-        if err.startswith(b"Warning: Bad ExifIFD directory") and fpath is not None:
-            fixcmd = """exiftool -overwrite_original_in_place -all= -tagsfromfile @ -all:all -unsafe "{fpath}" """.format(**locals())
+        if (err.startswith(b"Warning: Bad ExifIFD directory")
+                and fpath is not None):
+            fixcmd = ('exiftool -overwrite_original_in_place -all= '
+                    '-tagsfromfile @ -all:all -unsafe "{fpath}"'.format(
+                    **locals()))
             try:
                 _runproc(fixcmd)
             except RuntimeError:
@@ -190,10 +195,33 @@ class ExifEditor(object):
         """Returns the value of the specified tag, or the default value
         if the tag does not exist.
         """
-        cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" --{tag} "{self.photo}" """.format(**locals())
+        cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" -{tag} "{self.photo}" """.format(**locals())
         out = _runproc(cmd, self.photo)
+        if not isinstance(out, six.string_types):
+            out = out.decode("utf-8")
         info = json.loads(out)[0]
         ret = info.get(tag, default)
+        return ret
+
+
+    def getTags(self, just_names=False, include_empty=True):
+        """Returns a list of all the tags for the current image."""
+        cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" "{self.photo}" """.format(**locals())
+        out = _runproc(cmd, self.photo)
+        if not isinstance(out, six.string_types):
+            out = out.decode("utf-8")
+        info = json.loads(out)[0]
+        if include_empty:
+            if just_names:
+                ret = list(info.keys())
+            else:
+                ret = list(info.items())
+        else:
+            # Exclude those tags with empty values
+            if just_names:
+                ret = [tag for tag in info.keys() if info.get(tag)]
+            else:
+                ret = [(tag, val) for tag, val in info.items() if val]
         return ret
 
 
