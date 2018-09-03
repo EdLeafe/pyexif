@@ -7,8 +7,8 @@ It does its work mainly though the command-line "exiftool", which is required fo
 
 setup(
     name="pyexif",
-	version="0.2.1",
-    url="https://leafe.com/pyexif",
+	version="0.3.0",
+    url="https://github.com/EdLeafe/pyexif",
     author="Ed Leafe",
     author_email="ed@leafe.com",
     description="Python module to read/write EXIF image data",
@@ -21,5 +21,9 @@ setup(
         "Topic :: Utilities",
         "Operating System :: OS Independent",
         "License :: OSI Approved :: Python Software Foundation License",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3",
+        "Natural Language :: English",
+        "Topic :: Multimedia :: Graphics",
         ],
     )

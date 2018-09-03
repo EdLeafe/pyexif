@@ -59,7 +59,7 @@ except RuntimeError as e:
     # If the tool is installed, the error should be 'File not found'.
     # Otherwise, assume it isn't installed.
     err = "{0}".format(e).strip()
-    if "File not found:" not in err:
+    if "File not found" not in err:
         _EXIFTOOL_INSTALLED = False
         _install_exiftool_info()
 
@@ -72,6 +72,8 @@ class ExifEditor(object):
             self._optExpr = "-overwrite_original_in_place"
         else:
             self._optExpr = ""
+        if not isinstance(photo, six.string_types):
+            photo = photo.decode("utf-8")
         self.photo = photo
         # Tuples of (degrees, mirrored)
         self._rotations = {
@@ -109,6 +111,9 @@ class ExifEditor(object):
 
 
     def _rotate(self, deg, calc_only=False):
+        currOrient = self.getOrientation()
+        currRot, currMirror = self._rotations[currOrient]
+        dummy, newRot = divmod(currRot + deg, 360)
         currOrient = self.getOrientation()
         currRot, currMirror = self._rotations[currOrient]
         dummy, newRot = divmod(currRot + deg, 360)
@@ -173,14 +178,14 @@ class ExifEditor(object):
         ret = self.getTag("Keywords")
         if not ret:
             return []
-        if isinstance(ret, basestring):
+        if isinstance(ret, six.string_types):
             return [ret]
-        return ret
+        return sorted(ret)
 
 
     def setKeywords(self, kws):
-        """Sets the image's keyword list to the passed list of strings. Any existing
-        keywords are overwritten.
+        """Sets the image's keyword list to the passed list of strings. Any
+        existing keywords are overwritten.
         """
         self.clearKeywords()
         self.addKeywords(kws)
@@ -189,6 +194,18 @@ class ExifEditor(object):
     def clearKeywords(self):
         """Removes all keywords from the image."""
         self.setTag("Keywords", "")
+
+
+    def clearKeyword(self, kw):
+        """Removes a single keyword from the image. If the keyword does not
+        exist, this call is a no-op.
+        """
+        kws = self.getKeywords()
+        try:
+            kws.remove(kw)
+        except ValueError:
+            pass
+        self.setKeywords(kws)
 
 
     def getTag(self, tag, default=None):
@@ -222,7 +239,15 @@ class ExifEditor(object):
                 ret = [tag for tag in info.keys() if info.get(tag)]
             else:
                 ret = [(tag, val) for tag, val in info.items() if val]
-        return ret
+        return sorted(ret)
+
+
+    def getDictTags(self, include_empty=True):
+        """Returns a dict of all the tags for the current image, with the tag
+        name as the key and the tag value as the value.
+        """
+        tags = self.getTags(include_empty=include_empty)
+        return {k:v for k, v in tags}
 
 
     def setTag(self, tag, val):
