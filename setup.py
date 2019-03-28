@@ -9,7 +9,7 @@ in the README file.
 
 setup(
     name="pyexif",
-    version="0.4.0",
+    version="0.5.0",
     url="https://github.com/EdLeafe/pyexif",
     author="Ed Leafe",
     author_email="ed@leafe.com",
