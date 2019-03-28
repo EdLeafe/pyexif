@@ -54,7 +54,7 @@ def _runproc(cmd, fpath=None):
 # Test that the exiftool is installed
 _EXIFTOOL_INSTALLED = True
 try:
-    out = _runproc("exiftool some_dummy_name.jpg")
+    out = _runproc("exiftool -ver")
 except RuntimeError as e:
     # If the tool is installed, the error should be 'File not found'.
     # Otherwise, assume it isn't installed.
@@ -256,7 +256,7 @@ class ExifEditor(object):
         """
         if not isinstance(val, (list, tuple)):
             val = [val]
-        vallist = ["-{0}={1}".format(tag, v) for v in val]
+        vallist = ["-{0}='{1}'".format(tag, v) for v in val]
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
