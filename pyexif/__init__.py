@@ -269,6 +269,32 @@ class ExifEditor(object):
                 raise
 
 
+    def setTags(self, tags, vals):
+        """Sets the specified tags to the passed values. You can set multiple values
+        for the corresponding tags by passing those tags and values in as a list.
+        """
+        if not isinstance(tags, (list, tuple)):
+            tags = [tags]
+        if not isinstance(vals, (list, tuple)):
+            vals = [vals]
+        if len(tags) != len(vals):
+            print("setTags() warning: amount of tags ({0}) do not match vals ({1})"
+                .format(len(tags), len(vals)))
+        vallist = []
+        for tag, val in zip(tags, vals):
+            vallist.append("-{0}='{1}'".format(tag, val))
+        valstr = " ".join(vallist)
+        cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
+        try:
+            out = _runproc(cmd, self.photo)
+        except RuntimeError as e:
+            err = "{0}".format(e).strip()
+            if self._badTagPat.match(err):
+                print("Tag '{tag}' is invalid.".format(**locals()))
+            else:
+                raise
+
+
     def getOriginalDateTime(self):
         """Get the image's original date/time value (i.e., when the picture
         was 'taken').
