@@ -269,20 +269,15 @@ class ExifEditor(object):
                 raise
 
 
-    def setTags(self, tags, vals):
-        """Sets the specified tags to the passed values. You can set multiple values
-        for the corresponding tags by passing those tags and values in as a list.
+    def setTags(self, tags_dict):
+        """Sets the specified tags_dict ({tag: val, tag_n: val_n}) tag value combinations.
+        Used to set more than one tag, val value in a single call.
         """
-        if not isinstance(tags, (list, tuple)):
-            tags = [tags]
-        if not isinstance(vals, (list, tuple)):
-            vals = [vals]
-        if len(tags) != len(vals):
-            print("setTags() warning: amount of tags ({0}) do not match vals ({1})"
-                .format(len(tags), len(vals)))
+        if not isinstance(tags_dict, dict):
+            raise TypeError('tags_dict is not instance of dict')
         vallist = []
-        for tag, val in zip(tags, vals):
-            vallist.append("-{0}='{1}'".format(tag, val))
+        for tag in tags_dict:
+            vallist.append("-{0}='{1}'".format(tag, tags_dict[tag]))
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
