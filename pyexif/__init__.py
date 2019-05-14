@@ -277,7 +277,11 @@ class ExifEditor(object):
             raise TypeError('tags_dict is not instance of dict')
         vallist = []
         for tag in tags_dict:
-            vallist.append("-{0}='{1}'".format(tag, tags_dict[tag]))
+            val = tags_dict[tag]
+            # escape double quotes in case of string type
+            if isinstance(val, basestring):
+                val = val.replace('"', '\\"')
+            vallist.append('-{0}="{1}"'.format(tag, val))
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
