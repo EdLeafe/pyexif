@@ -279,7 +279,7 @@ class ExifEditor(object):
         for tag in tags_dict:
             val = tags_dict[tag]
             # escape double quotes in case of string type
-            if isinstance(val, basestring):
+            if isinstance(val, six.string_types):
                 val = val.replace('"', '\\"')
             vallist.append('-{0}="{1}"'.format(tag, val))
         valstr = " ".join(vallist)
