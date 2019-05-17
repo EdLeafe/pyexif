@@ -256,7 +256,8 @@ class ExifEditor(object):
         """
         if not isinstance(val, (list, tuple)):
             val = [val]
-        vallist = ["-{0}='{1}'".format(tag, v) for v in val]
+        vallist = ['-{0}="{1}"'.format(tag,
+            v.replace('"', '\\"') if isinstance(v, six.string_types) else v) for v in val]
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
