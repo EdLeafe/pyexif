@@ -256,7 +256,8 @@ class ExifEditor(object):
         """
         if not isinstance(val, (list, tuple)):
             val = [val]
-        vallist = ["-{0}='{1}'".format(tag, v) for v in val]
+        vallist = ['-{0}="{1}"'.format(tag,
+            v.replace('"', '\\"') if isinstance(v, six.string_types) else v) for v in val]
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
@@ -277,7 +278,11 @@ class ExifEditor(object):
             raise TypeError('tags_dict is not instance of dict')
         vallist = []
         for tag in tags_dict:
-            vallist.append("-{0}='{1}'".format(tag, tags_dict[tag]))
+            val = tags_dict[tag]
+            # escape double quotes in case of string type
+            if isinstance(val, six.string_types):
+                val = val.replace('"', '\\"')
+            vallist.append('-{0}="{1}"'.format(tag, val))
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
