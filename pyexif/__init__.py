@@ -66,12 +66,14 @@ except RuntimeError as e:
 
 
 class ExifEditor(object):
-    def __init__(self, photo=None, save_backup=False):
+    def __init__(self, photo=None, save_backup=False, extra_opt=None):
         self.save_backup = save_backup
         if not save_backup:
             self._optExpr = "-overwrite_original_in_place"
         else:
             self._optExpr = ""
+        if extra_opt:
+            self._optExpr += " " + extra_opt
         if not isinstance(photo, six.string_types):
             photo = photo.decode("utf-8")
         self.photo = photo
