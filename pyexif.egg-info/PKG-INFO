@@ -1,0 +1,25 @@
+Metadata-Version: 1.1
+Name: pyexif
+Version: 0.5.0
+Summary: Python module to read/write EXIF image data
+Home-page: https://github.com/EdLeafe/pyexif
+Author: Ed Leafe
+Author-email: ed@leafe.com
+License: Python Software Foundation License
+Description: Python module for working with EXIF image data.
+        
+        It does its work mainly though the command-line "exiftool", which is required
+        for this module to work. Information on obtaining and installing exiftool are
+        in the README file.
+        
+Keywords: exif image metadata photo
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Utilities
+Classifier: Operating System :: OS Independent
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 3
+Classifier: Natural Language :: English
+Classifier: Topic :: Multimedia :: Graphics

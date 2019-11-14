@@ -1,0 +1,7 @@
+README
+setup.py
+pyexif/__init__.py
+pyexif.egg-info/PKG-INFO
+pyexif.egg-info/SOURCES.txt
+pyexif.egg-info/dependency_links.txt
+pyexif.egg-info/top_level.txt

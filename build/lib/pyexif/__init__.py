@@ -28,7 +28,7 @@ def _runproc(cmd, fpath=None):
     #   msg = "Running this class requires that exiftool is installed"
     #   raise RuntimeError(msg)
     pipe = subprocess.PIPE
-    proc = subprocess.Popen(cmd, shell=True, stdin=pipe, stdout=pipe,
+    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
             stderr=pipe, close_fds=True)
     proc.wait()
     err = proc.stderr.read()
