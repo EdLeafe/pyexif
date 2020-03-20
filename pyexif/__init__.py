@@ -10,31 +10,26 @@ import subprocess
 import sys
 
 
-def _install_exiftool_info():
-    print("""
+INSTALL_EXIFTOOL_INFO = """
 Cannot find 'exiftool'.
 
 The ExifEditor class requires that the 'exiftool' command-line
 utility is installed in order to work. Information on obtaining
 this excellent utility can be found at:
 
-http://www.sno.phy.queensu.ca/~phil/exiftool/
-""")
+https://exiftool.org
+"""
 
 
 def _runproc(cmd, fpath=None):
-    if not _EXIFTOOL_INSTALLED:
-        _install_exiftool_info()
-        msg = "Running this class requires that exiftool is installed"
-        raise RuntimeError(msg)
     pipe = subprocess.PIPE
     proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
             stderr=pipe, close_fds=True)
     proc.wait()
-    err = proc.stderr.read()
+    err = six.ensure_text(proc.stderr.read())
     if err:
         # See if it's a damaged EXIF directory. If so, fix it and re-try
-        if (err.startswith(b"Warning: Bad ExifIFD directory")
+        if (err.startswith("Warning: Bad ExifIFD directory")
                 and fpath is not None):
             fixcmd = ('exiftool -overwrite_original_in_place -all= '
                     '-tagsfromfile @ -all:all -unsafe "{fpath}"'.format(
@@ -46,23 +41,11 @@ def _runproc(cmd, fpath=None):
                 pass
             # Retry
             return _runproc(cmd, fpath)
+        elif "exiftool: command not found" in err:
+            raise RuntimeError(INSTALL_EXIFTOOL_INFO)
         raise RuntimeError(err)
     else:
         return proc.stdout.read()
-
-
-# Test that the exiftool is installed
-_EXIFTOOL_INSTALLED = True
-try:
-    out = _runproc("exiftool -ver")
-except RuntimeError as e:
-    # If the tool is installed, the error should be 'File not found'.
-    # Otherwise, assume it isn't installed.
-    err = "{0}".format(e).strip()
-    if "File not found" not in err:
-        _EXIFTOOL_INSTALLED = False
-        _install_exiftool_info()
-
 
 
 class ExifEditor(object):
@@ -213,9 +196,7 @@ class ExifEditor(object):
         if the tag does not exist.
         """
         cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" -{tag} "{self.photo}" """.format(**locals())
-        out = _runproc(cmd, self.photo)
-        if not isinstance(out, six.string_types):
-            out = out.decode("utf-8")
+        out = six.ensure_text(_runproc(cmd, self.photo))
         info = json.loads(out)[0]
         ret = info.get(tag, default)
         return ret
@@ -224,9 +205,7 @@ class ExifEditor(object):
     def getTags(self, just_names=False, include_empty=True):
         """Returns a list of all the tags for the current image."""
         cmd = """exiftool -j -d "%Y:%m:%d %H:%M:%S" "{self.photo}" """.format(**locals())
-        out = _runproc(cmd, self.photo)
-        if not isinstance(out, six.string_types):
-            out = out.decode("utf-8")
+        out = six.ensure_text(_runproc(cmd, self.photo))
         info = json.loads(out)[0]
         if include_empty:
             if just_names:
@@ -247,7 +226,7 @@ class ExifEditor(object):
         name as the key and the tag value as the value.
         """
         tags = self.getTags(include_empty=include_empty)
-        return {k:v for k, v in tags}
+        return {k: v for k, v in tags}
 
 
     def setTag(self, tag, val):
@@ -261,7 +240,7 @@ class ExifEditor(object):
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
-            out = _runproc(cmd, self.photo)
+            out = six.ensure_text(_runproc(cmd, self.photo))
         except RuntimeError as e:
             err = "{0}".format(e).strip()
             if self._badTagPat.match(err):
@@ -286,7 +265,7 @@ class ExifEditor(object):
         valstr = " ".join(vallist)
         cmd = """exiftool {self._optExpr} {valstr} "{self.photo}" """.format(**locals())
         try:
-            out = _runproc(cmd, self.photo)
+            out = six.ensure_text(_runproc(cmd, self.photo))
         except RuntimeError as e:
             err = "{0}".format(e).strip()
             if self._badTagPat.match(err):
