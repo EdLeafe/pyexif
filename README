@@ -1,4 +1,6 @@
-Images can contain EXIF metadata that describes information about the
+Introduction
+============
+Images can contain **EXIF** metadata that describes information about the
 image, such as creation date, the device used to create the image,
 exposure data, GPS geotagging, keywords, compression, flash info, and
 lots more. In addition to the standard tags defined by camera
