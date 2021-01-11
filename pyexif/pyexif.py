@@ -27,6 +27,8 @@ def _runproc(cmd, fpath=None):
             stderr=pipe, close_fds=True)
     proc.wait()
     err = proc.stderr.read()
+    if isinstance(err, six.binary_type):
+        err = err.decode("utf-8")
     if err:
         # See if it's a damaged EXIF directory. If so, fix it and re-try
         if (err.startswith("Warning: Bad ExifIFD directory")
@@ -41,8 +43,13 @@ def _runproc(cmd, fpath=None):
                 pass
             # Retry
             return _runproc(cmd, fpath)
+        elif err.startswith("Warning:"):
+            # Ignore
+            print(err)
+            err = ""
         elif "exiftool: command not found" in err:
             raise RuntimeError(INSTALL_EXIFTOOL_INFO)
+    if err:
         raise RuntimeError(err)
     else:
         result = proc.stdout.read()
@@ -166,7 +173,7 @@ class ExifEditor(object):
             return []
         if isinstance(ret, six.string_types):
             return [ret]
-        return sorted(ret)
+        return sorted([str(kw) for kw in ret])
 
 
     def setKeywords(self, kws):
