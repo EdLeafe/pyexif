@@ -85,7 +85,7 @@ class ExifEditor(object):
         self._dateTimePattern = re.compile(r"\d{4}:[01]\d:[0-3]\d [0-2]\d:[0-5]\d:[0-5]\d$")
         self._badTagPat = re.compile(r"Warning: Tag '[^']+' does not exist")
 
-        super(ExifEditor, self).__init__()
+        super().__init__()
 
 
     def rotateCCW(self, num=1, calc_only=False):
@@ -160,7 +160,7 @@ class ExifEditor(object):
         """Add the passed list of strings to the image's keyword tag, preserving
         existing keywords.
         """
-        kws = ["-iptc:keywords+={0}".format(kw.replace(" ", r"\ ")) for kw in kws]
+        kws = ["-iptc:keywords+={0}".format(kw.replace(" ", r"\ ").replace("&", r"\&")) for kw in kws]
         kwopt = " ".join(kws)
         cmd = """exiftool {self._optExpr} {kwopt} "{self.photo}" """.format(**locals())
         _runproc(cmd, self.photo)
