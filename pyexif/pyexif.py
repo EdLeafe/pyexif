@@ -31,7 +31,7 @@ def _runproc(cmd, fpath=None):
         err = err.decode("utf-8")
     if err:
         # See if it's a damaged EXIF directory. If so, fix it and re-try
-        if (err.startswith("Warning: Bad ExifIFD directory")
+        if (err.startswith(b"Warning: Bad ExifIFD directory")
                 and fpath is not None):
             fixcmd = ('exiftool -overwrite_original_in_place -all= '
                     '-tagsfromfile @ -all:all -unsafe "{fpath}"'.format(
@@ -43,11 +43,11 @@ def _runproc(cmd, fpath=None):
                 pass
             # Retry
             return _runproc(cmd, fpath)
-        elif err.startswith("Warning:"):
+        elif err.startswith(b"Warning:"):
             # Ignore
             print(err)
             err = ""
-        elif "exiftool: command not found" in err:
+        elif b"exiftool: command not found" in err:
             raise RuntimeError(INSTALL_EXIFTOOL_INFO)
     if err:
         raise RuntimeError(err)
