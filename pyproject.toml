@@ -1,0 +1,41 @@
+[tool.black]
+line-length = 100
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | _build
+    | build
+    | dist
+  )/
+  | requirements.txt
+                     # the root of the project
+)
+'''
+
+[tool.poetry]
+name = "pyexif"
+version = "1.0.0"
+description = "Python wrapping for the exiftool library"
+authors = ["EdLeafe <ed@leafe.com>"]
+license = "Apache 2.0"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+click = "^8.1.3"
+
+[tool.poetry.dev-dependencies]
+pytest-pudb = "^0.7.0"
+ipython = "^8.4.0"
+pytest-mock = "^3.8.2"
+pylint = "^2.14.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
