@@ -35,6 +35,7 @@ pytest-pudb = "^0.7.0"
 ipython = "^8.4.0"
 pytest-mock = "^3.8.2"
 pylint = "^2.14.5"
+black = "^22.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

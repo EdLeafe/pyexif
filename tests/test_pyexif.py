@@ -1,7 +1,6 @@
 from datetime import datetime
 import json
 import random
-import subprocess
 from unittest.mock import ANY, MagicMock
 
 import pytest
@@ -14,17 +13,20 @@ def test_runproc_ok(mocker, random_bytes_factory):
     mock_response = random_bytes_factory()
     mock_proc.communicate = MagicMock(return_value=(mock_response, b""))
     mocker.patch.object(pyexif, "Popen", return_value=mock_proc)
+    # pylint: disable=protected-access
     result = pyexif._runproc("dummy")
     assert result == mock_response.decode("utf-8")
 
 
+# pylint: disable=unused-argument
 def test_runproc_err_dir(mocker, random_string_factory, print_mock):
     mock_proc = MagicMock()
     mock_proc.communicate = MagicMock(return_value=(b"", b"Warning: Bad ExifIFD directory blah"))
     mock_popen = mocker.patch.object(pyexif, "Popen", return_value=mock_proc)
     fpath = random_string_factory()
     cmd = random_string_factory()
-    result = pyexif._runproc(cmd, fpath=fpath)
+    # pylint: disable=protected-access
+    pyexif._runproc(cmd, fpath=fpath)
     # Original, fix, retry
     assert mock_popen.call_count == 3
     call0, call1, call2 = mock_popen.call_args_list
@@ -36,9 +38,10 @@ def test_runproc_err_dir(mocker, random_string_factory, print_mock):
 def test_runproc_not_installed(mocker, random_string_factory):
     mock_proc = MagicMock()
     mock_proc.communicate = MagicMock(return_value=(b"", b"exiftool: command not found"))
-    mock_popen = mocker.patch.object(pyexif, "Popen", return_value=mock_proc)
+    mocker.patch.object(pyexif, "Popen", return_value=mock_proc)
     fpath = random_string_factory()
     cmd = random_string_factory()
+    # pylint: disable=protected-access
     with pytest.raises(RuntimeError, match=pyexif.INSTALL_EXIFTOOL_INFO):
         pyexif._runproc(cmd, fpath=fpath)
 
@@ -48,7 +51,7 @@ def test_runproc_not_installed(mocker, random_string_factory):
 )
 @pytest.mark.parametrize("save", [True, False])
 @pytest.mark.parametrize("photo", [None, "photo", b"photo"])
-def test_exif_init(random_string_factory, photo, save, opts, exp_opts):
+def test_exif_init(photo, save, opts, exp_opts):
     ed = pyexif.ExifEditor(photo=photo, save_backup=save, extra_opts=opts)
     assert ed.save_backup == save
     if not save:
@@ -56,6 +59,7 @@ def test_exif_init(random_string_factory, photo, save, opts, exp_opts):
             exp_opts = f"{exp_opts} -overwrite_original_in_place"
         else:
             exp_opts = "-overwrite_original_in_place"
+    # pylint: disable=protected-access
     assert ed._optExpr == exp_opts
     exp_photo = photo.decode("utf-8") if isinstance(photo, bytes) else photo
     assert ed.photo == exp_photo
@@ -101,9 +105,10 @@ def test_get_orientation(mocker, orient):
 
 def test_rotate(mocker):
     ed = pyexif.ExifEditor()
-    mock_orient = mocker.patch.object(ed, "getOrientation", return_value=1)
+    mocker.patch.object(ed, "getOrientation", return_value=1)
     mocker.patch.object(ed, "setOrientation")
     rot_values = {0: 1, 1: 6, 2: 3, 3: 8}
+    # pylint: disable=protected-access
     for num in range(16):
         result = ed._rotate(num * 90, True)
         norm = num % 4
@@ -113,6 +118,7 @@ def test_rotate(mocker):
 @pytest.mark.parametrize("degrees", [13, 46, 12345, -91])
 def test_rotate_bad_val(degrees):
     ed = pyexif.ExifEditor()
+    # pylint: disable=protected-access
     with pytest.raises(ValueError, match="must be multiples of 90 degrees"):
         ed._rotate(degrees, True)
 
@@ -319,7 +325,7 @@ def test_set_tag_bad_tag(capsys, mocker, random_string_factory):
     ed = pyexif.ExifEditor(photo=photo)
     tag = random_string_factory()
     val = random_string_factory()
-    mock_run = mocker.patch.object(
+    mocker.patch.object(
         pyexif, "_runproc", side_effect=RuntimeError(f"Warning: Tag '{tag}' does not exist")
     )
     ed.setTag(tag, val)
@@ -327,7 +333,7 @@ def test_set_tag_bad_tag(capsys, mocker, random_string_factory):
     assert f"Tag '{tag}' is invalid." in out
 
 
-def test_set_tags_bad_type(mocker, random_string_factory):
+def test_set_tags_bad_type(random_string_factory):
     photo = random_string_factory()
     bad_dict = "not a dict"
     ed = pyexif.ExifEditor(photo=photo)
@@ -340,7 +346,7 @@ def test_set_tags_bad_tag(capsys, mocker, random_string_factory):
     ed = pyexif.ExifEditor(photo=photo)
     tag = random_string_factory()
     val = random_string_factory()
-    mock_run = mocker.patch.object(
+    mocker.patch.object(
         pyexif, "_runproc", side_effect=RuntimeError(f"Warning: Tag '{tag}' does not exist")
     )
     ed.setTags({tag: val})
@@ -385,7 +391,8 @@ def test_get_datetime_field(mocker, random_string_factory):
     # Need to trim the milliseconds
     exp_date = datetime(now.year, now.month, now.day, now.hour, now.minute, now.second)
     fmt_now = now.strftime("%Y:%m:%d %H:%M:%S")
-    mock_get = mocker.patch.object(ed, "getTag", return_value=fmt_now)
+    mocker.patch.object(ed, "getTag", return_value=fmt_now)
+    # pylint: disable=protected-access
     result = ed._getDateTimeField(fld)
     assert result == exp_date
 
@@ -395,10 +402,9 @@ def test_set_datetime_field(mocker, random_string_factory):
     ed = pyexif.ExifEditor(photo=photo)
     fld = random_string_factory(prefix="FLD")
     now = datetime.utcnow()
-    # Need to trim the milliseconds
-    exp_date = datetime(now.year, now.month, now.day, now.hour, now.minute, now.second)
     fmt_now = now.strftime("%Y:%m:%d %H:%M:%S")
     mock_run = mocker.patch.object(pyexif, "_runproc")
+    # pylint: disable=protected-access
     ed._setDateTimeField(fld, now)
     exp_cmd = f"""exiftool -overwrite_original_in_place -{fld}='{fmt_now}' "{photo}" """
     mock_run.assert_called_once_with(exp_cmd, fpath=photo)
@@ -416,6 +422,7 @@ def test_set_datetime_field(mocker, random_string_factory):
     ],
 )
 def test_format_date_time(dt_str, ok):
+    # pylint: disable=protected-access
     ed = pyexif.ExifEditor()
     if not ok:
         with pytest.raises(ValueError, match="Incorrect datetime value"):
