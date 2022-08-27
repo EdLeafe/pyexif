@@ -60,53 +60,61 @@ def test_exif_init(photo, save, opts, exp_opts):
         else:
             exp_opts = "-overwrite_original_in_place"
     # pylint: disable=protected-access
-    assert ed._optExpr == exp_opts
+    assert ed._opt_expr == exp_opts
     exp_photo = photo.decode("utf-8") if isinstance(photo, bytes) else photo
     assert ed.photo == exp_photo
 
 
-def test_rotateCCW(mocker):
+def test_rotate_CCW(mocker):
     ed = pyexif.ExifEditor()
     mock_rotate = mocker.patch.object(ed, "_rotate")
-    ed.rotateCCW()
+    ed.rotate_CCW()
     mock_rotate.assert_called_once_with(-90, False)
 
 
-def test_rotateCW(mocker):
+def test_rotate_CW(mocker):
     ed = pyexif.ExifEditor()
     mock_rotate = mocker.patch.object(ed, "_rotate")
-    ed.rotateCW()
+    ed.rotate_CW()
     mock_rotate.assert_called_once_with(90, False)
 
 
-def test_rotateCCW_mult(mocker):
+def test_rotate_CCW_mult(mocker):
     ed = pyexif.ExifEditor()
     mock_rotate = mocker.patch.object(ed, "_rotate")
     num = random.randrange(1, 20)
-    ed.rotateCCW(num)
+    ed.rotate_CCW(num)
     mock_rotate.assert_called_once_with(-90 * num, False)
 
 
-def test_rotateCW_mult(mocker):
+def test_rotate_CW_mult(mocker):
     ed = pyexif.ExifEditor()
     mock_rotate = mocker.patch.object(ed, "_rotate")
     num = random.randrange(1, 20)
-    ed.rotateCW(num)
+    ed.rotate_CW(num)
     mock_rotate.assert_called_once_with(90 * num, False)
 
 
+def test_get_orientation(mocker, random_string_factory):
+    ed = pyexif.ExifEditor()
+    orient = random_string_factory()
+    mocker.patch.object(pyexif, "_runproc", return_value=json.dumps([{"Orientation": orient}]))
+    result = ed.get_orientation()
+    assert result == orient
+
+
 @pytest.mark.parametrize("orient", [1, 2, 3, 4])
-def test_get_orientation(mocker, orient):
+def test_get_orientation_tag(mocker, orient):
     ed = pyexif.ExifEditor()
     mocker.patch.object(pyexif, "_runproc", return_value=json.dumps([{"Orientation#": orient}]))
-    result = ed.getOrientation()
+    result = ed.get_orientation_tag()
     assert result == orient
 
 
 def test_rotate(mocker):
     ed = pyexif.ExifEditor()
-    mocker.patch.object(ed, "getOrientation", return_value=1)
-    mocker.patch.object(ed, "setOrientation")
+    mocker.patch.object(ed, "get_orientation_tag", return_value=1)
+    mocker.patch.object(ed, "set_orientation")
     rot_values = {0: 1, 1: 6, 2: 3, 3: 8}
     # pylint: disable=protected-access
     for num in range(16):
@@ -128,9 +136,9 @@ def test_rotate_bad_val(degrees):
 )
 def test_mirror_vertically(mocker, start, result):
     ed = pyexif.ExifEditor()
-    mocker.patch.object(ed, "rotateCW", return_value=start)
-    mock_set = mocker.patch.object(ed, "setOrientation")
-    ed.mirrorVertically()
+    mocker.patch.object(ed, "rotate_CW", return_value=start)
+    mock_set = mocker.patch.object(ed, "set_orientation")
+    ed.mirror_vertically()
     mock_set.assert_called_once_with(result)
 
 
@@ -139,9 +147,9 @@ def test_mirror_vertically(mocker, start, result):
 )
 def test_mirror_horizontally(mocker, start, result):
     ed = pyexif.ExifEditor()
-    mocker.patch.object(ed, "getOrientation", return_value=start)
-    mock_set = mocker.patch.object(ed, "setOrientation")
-    ed.mirrorHorizontally()
+    mocker.patch.object(ed, "get_orientation_tag", return_value=start)
+    mock_set = mocker.patch.object(ed, "set_orientation")
+    ed.mirror_horizontally()
     mock_set.assert_called_once_with(result)
 
 
@@ -150,15 +158,15 @@ def test_set_orientation(mocker, random_string_factory):
     ed = pyexif.ExifEditor(photo=photo, save_backup=True)
     mock_run = mocker.patch.object(pyexif, "_runproc")
     val = random.randrange(1, 9)
-    ed.setOrientation(val)
+    ed.set_orientation(val)
     mock_run.assert_called_once_with(f"exiftool  -Orientation#='{val}' \"{photo}\" ", fpath=photo)
 
 
 def test_add_keyword(mocker, random_string_factory):
     ed = pyexif.ExifEditor()
     kw = random_string_factory()
-    mock_kws = mocker.patch.object(ed, "addKeywords")
-    ed.addKeyword(kw)
+    mock_kws = mocker.patch.object(ed, "add_keywords")
+    ed.add_keyword(kw)
     mock_kws.assert_called_once_with([kw])
 
 
@@ -168,7 +176,7 @@ def test_add_keywords(mocker, random_string_factory):
     kw1 = random_string_factory()
     kw2 = random_string_factory()
     mock_run = mocker.patch.object(pyexif, "_runproc")
-    ed.addKeywords([kw1, kw2])
+    ed.add_keywords([kw1, kw2])
     mock_run.assert_called_once_with(ANY, fpath=photo)
     call_args = mock_run.call_args[0][0]
     assert "exiftool " in call_args
@@ -181,8 +189,8 @@ def test_get_keywords(mocker, random_string_factory):
     # Make the keywords sort in reverse
     kw1 = random_string_factory(prefix="ZZ")
     kw2 = random_string_factory(prefix="AA")
-    mocker.patch.object(ed, "getTag", return_value=[kw1, kw2])
-    result = ed.getKeywords()
+    mocker.patch.object(ed, "get_tag", return_value=[kw1, kw2])
+    result = ed.get_keywords()
     assert result == [kw2, kw1]
 
 
@@ -190,25 +198,25 @@ def test_set_keywords(mocker, random_string_factory):
     ed = pyexif.ExifEditor()
     kw1 = random_string_factory()
     kw2 = random_string_factory()
-    mock_clear = mocker.patch.object(ed, "clearKeywords")
-    mock_add = mocker.patch.object(ed, "addKeywords")
-    ed.setKeywords([kw1, kw2])
+    mock_clear = mocker.patch.object(ed, "clear_keywords")
+    mock_add = mocker.patch.object(ed, "add_keywords")
+    ed.set_keywords([kw1, kw2])
     mock_clear.assert_called_once_with()
     mock_add.assert_called_once_with([kw1, kw2])
 
 
 def test_clear_keywords(mocker):
     ed = pyexif.ExifEditor()
-    mock_set = mocker.patch.object(ed, "setTag")
-    ed.clearKeywords()
+    mock_set = mocker.patch.object(ed, "set_tag")
+    ed.clear_keywords()
     mock_set.assert_called_once_with("Keywords", "")
 
 
 def test_remove_keyword(mocker, random_string_factory):
     ed = pyexif.ExifEditor()
-    mock_remove = mocker.patch.object(ed, "removeKeywords")
+    mock_remove = mocker.patch.object(ed, "remove_keywords")
     kw = random_string_factory()
-    ed.removeKeyword(kw)
+    ed.remove_keyword(kw)
     mock_remove.assert_called_once_with([kw])
 
 
@@ -218,9 +226,9 @@ def test_remove_keywords(mocker, random_string_factory):
     kw2 = random_string_factory()
     bad_kw1 = random_string_factory()
     bad_kw2 = random_string_factory()
-    mocker.patch.object(ed, "getKeywords", return_value=[kw1, bad_kw1, kw2, bad_kw2])
-    mock_set = mocker.patch.object(ed, "setKeywords")
-    ed.removeKeywords([bad_kw1, bad_kw2])
+    mocker.patch.object(ed, "get_keywords", return_value=[kw1, bad_kw1, kw2, bad_kw2])
+    mock_set = mocker.patch.object(ed, "set_keywords")
+    ed.remove_keywords([bad_kw1, bad_kw2])
     mock_set.assert_called_once_with([kw1, kw2])
 
 
@@ -231,7 +239,7 @@ def test_get_tag(mocker, random_string_factory):
     ed = pyexif.ExifEditor(photo=photo)
     resp_dict = {tag_name: tag_val}
     mock_run = mocker.patch.object(pyexif, "_runproc", return_value=json.dumps([resp_dict]))
-    result = ed.getTag(tag_name)
+    result = ed.get_tag(tag_name)
     assert result == tag_val
     mock_run.assert_called_once_with(
         f'exiftool -j -d "%Y:%m:%d %H:%M:%S" -{tag_name} "{photo}" ', fpath=photo
@@ -247,7 +255,7 @@ def test_get_tag_default(mocker, random_string_factory):
     ed = pyexif.ExifEditor(photo=photo)
     resp_dict = {tag_name: tag_val}
     mock_run = mocker.patch.object(pyexif, "_runproc", return_value=json.dumps([resp_dict]))
-    result = ed.getTag(bad_name, default=default)
+    result = ed.get_tag(bad_name, default=default)
     assert result == default
     mock_run.assert_called_once_with(
         f'exiftool -j -d "%Y:%m:%d %H:%M:%S" -{bad_name} "{photo}" ', fpath=photo
@@ -268,7 +276,7 @@ def test_get_tags(mocker, random_string_factory, just_names, include_empty):
     resp_dict = {tag1: val1, tag2: val2, tag3: val3}
     mock_run = mocker.patch.object(pyexif, "_runproc", return_value=json.dumps([resp_dict]))
     ed = pyexif.ExifEditor(photo=photo)
-    result = ed.getTags(just_names=just_names, include_empty=include_empty)
+    result = ed.get_tags(just_names=just_names, include_empty=include_empty)
     mock_run.assert_called_once_with(f'exiftool -j -d "%Y:%m:%d %H:%M:%S" "{photo}" ', fpath=photo)
     if just_names:
         if include_empty:
@@ -295,7 +303,7 @@ def test_get_dict_tags(mocker, random_string_factory, include_empty):
     resp_dict = {tag1: val1, tag2: val2, tag3: val3}
     mock_run = mocker.patch.object(pyexif, "_runproc", return_value=json.dumps([resp_dict]))
     ed = pyexif.ExifEditor(photo=photo)
-    result = ed.getDictTags(include_empty=include_empty)
+    result = ed.get_dict_tags(include_empty=include_empty)
     mock_run.assert_called_once_with(f'exiftool -j -d "%Y:%m:%d %H:%M:%S" "{photo}" ', fpath=photo)
     if include_empty:
         assert result == {tag1: val1, tag2: val2, tag3: val3}
@@ -315,7 +323,7 @@ def test_set_tags(mocker, random_string_factory):
     tag_dict = {tag1: val1, tag2: val2, tag3: val3}
     mock_run = mocker.patch.object(pyexif, "_runproc")
     ed = pyexif.ExifEditor(photo=photo)
-    ed.setTags(tag_dict)
+    ed.set_tags(tag_dict)
     exp_cmd = f'exiftool -overwrite_original_in_place -{tag1}="{val1}" -{tag2}="{val2}" -{tag3}="{val3}" "{photo}" '
     mock_run.assert_called_once_with(exp_cmd, fpath=photo)
 
@@ -328,7 +336,7 @@ def test_set_tag_bad_tag(capsys, mocker, random_string_factory):
     mocker.patch.object(
         pyexif, "_runproc", side_effect=RuntimeError(f"Warning: Tag '{tag}' does not exist")
     )
-    ed.setTag(tag, val)
+    ed.set_tag(tag, val)
     out, _ = capsys.readouterr()
     assert f"Tag '{tag}' is invalid." in out
 
@@ -338,7 +346,7 @@ def test_set_tags_bad_type(random_string_factory):
     bad_dict = "not a dict"
     ed = pyexif.ExifEditor(photo=photo)
     with pytest.raises(TypeError, match="is not instance of dict"):
-        ed.setTags(bad_dict)
+        ed.set_tags(bad_dict)
 
 
 def test_set_tags_bad_tag(capsys, mocker, random_string_factory):
@@ -349,38 +357,38 @@ def test_set_tags_bad_tag(capsys, mocker, random_string_factory):
     mocker.patch.object(
         pyexif, "_runproc", side_effect=RuntimeError(f"Warning: Tag '{tag}' does not exist")
     )
-    ed.setTags({tag: val})
+    ed.set_tags({tag: val})
     out, _ = capsys.readouterr()
     assert f"Tag '{tag}' is invalid." in out
 
 
 def test_get_original_date_time(mocker):
     ed = pyexif.ExifEditor()
-    mock_get = mocker.patch.object(ed, "_getDateTimeField")
-    ed.getOriginalDateTime()
+    mock_get = mocker.patch.object(ed, "_get_date_time_field")
+    ed.get_original_date_time()
     mock_get.assert_called_once_with("DateTimeOriginal")
 
 
 def test_set_original_date_time(mocker, random_string_factory):
     ed = pyexif.ExifEditor()
     dttm = random_string_factory()
-    mock_set = mocker.patch.object(ed, "_setDateTimeField")
-    ed.setOriginalDateTime(dttm)
+    mock_set = mocker.patch.object(ed, "_set_date_time_field")
+    ed.set_original_date_time(dttm)
     mock_set.assert_called_once_with("DateTimeOriginal", dttm)
 
 
 def test_get_modified_date_time(mocker):
     ed = pyexif.ExifEditor()
-    mock_get = mocker.patch.object(ed, "_getDateTimeField")
-    ed.getModificationDateTime()
+    mock_get = mocker.patch.object(ed, "_get_date_time_field")
+    ed.get_modification_date_time()
     mock_get.assert_called_once_with("FileModifyDate")
 
 
 def test_set_modified_date_time(mocker, random_string_factory):
     ed = pyexif.ExifEditor()
     dttm = random_string_factory()
-    mock_set = mocker.patch.object(ed, "_setDateTimeField")
-    ed.setModificationDateTime(dttm)
+    mock_set = mocker.patch.object(ed, "_set_date_time_field")
+    ed.set_modification_date_time(dttm)
     mock_set.assert_called_once_with("FileModifyDate", dttm)
 
 
@@ -391,9 +399,9 @@ def test_get_datetime_field(mocker, random_string_factory):
     # Need to trim the milliseconds
     exp_date = datetime(now.year, now.month, now.day, now.hour, now.minute, now.second)
     fmt_now = now.strftime("%Y:%m:%d %H:%M:%S")
-    mocker.patch.object(ed, "getTag", return_value=fmt_now)
+    mocker.patch.object(ed, "get_tag", return_value=fmt_now)
     # pylint: disable=protected-access
-    result = ed._getDateTimeField(fld)
+    result = ed._get_date_time_field(fld)
     assert result == exp_date
 
 
@@ -405,7 +413,7 @@ def test_set_datetime_field(mocker, random_string_factory):
     fmt_now = now.strftime("%Y:%m:%d %H:%M:%S")
     mock_run = mocker.patch.object(pyexif, "_runproc")
     # pylint: disable=protected-access
-    ed._setDateTimeField(fld, now)
+    ed._set_date_time_field(fld, now)
     exp_cmd = f"""exiftool -overwrite_original_in_place -{fld}='{fmt_now}' "{photo}" """
     mock_run.assert_called_once_with(exp_cmd, fpath=photo)
 
@@ -426,7 +434,7 @@ def test_format_date_time(dt_str, ok):
     ed = pyexif.ExifEditor()
     if not ok:
         with pytest.raises(ValueError, match="Incorrect datetime value"):
-            ed._formatDateTime(dt_str)
+            ed._format_date_time(dt_str)
     else:
         # No exception should be raised
-        ed._formatDateTime(dt_str)
+        ed._format_date_time(dt_str)

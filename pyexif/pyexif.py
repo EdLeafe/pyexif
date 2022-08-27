@@ -65,7 +65,7 @@ class ExifEditor:
         ops = copy.deepcopy(extra_opts)
         if not save_backup:
             ops.append("-overwrite_original_in_place")
-        self._optExpr = " ".join(ops)
+        self._opt_expr = " ".join(ops)
         if isinstance(photo, bytes):
             photo = photo.decode("utf-8")
         self.photo = photo
@@ -81,54 +81,58 @@ class ExifEditor:
             7: (270, 1),
             8: (270, 0),
         }
-        self._invertedRotations = {v: k for k, v in self._rotations.items()}
+        self._inverted_rotations = {v: k for k, v in self._rotations.items()}
         # DateTime patterns
-        self._datePattern = re.compile(r"\d{4}:[01]\d:[0-3]\d$")
-        self._dateTimePattern = re.compile(r"\d{4}:[01]\d:[0-3]\d [0-2]\d:[0-5]\d:[0-5]\d$")
-        self._badTagPat = re.compile(r"Warning: Tag '[^']+' does not exist")
+        self._date_pattern = re.compile(r"\d{4}:[01]\d:[0-3]\d$")
+        self._date_time_pattern = re.compile(r"\d{4}:[01]\d:[0-3]\d [0-2]\d:[0-5]\d:[0-5]\d$")
+        self._bad_tag_pat = re.compile(r"Warning: Tag '[^']+' does not exist")
 
-    def rotateCCW(self, num=1, calc_only=False):
+    def rotate_CCW(self, num=1, calc_only=False):
         """Rotate left in 90 degree increments"""
         return self._rotate(-90 * num, calc_only)
 
-    def rotateCW(self, num=1, calc_only=False):
+    def rotate_CW(self, num=1, calc_only=False):
         """Rotate right in 90 degree increments"""
         return self._rotate(90 * num, calc_only)
 
-    def getOrientation(self):
+    def get_orientation_tag(self):
         """Returns the current Orientation tag number."""
-        return self.getTag("Orientation#", 1)
+        return self.get_tag("Orientation#", 1)
+
+    def get_orientation(self):
+        """Returns the current Orientation string."""
+        return self.get_tag("Orientation", 1)
 
     def _rotate(self, deg, calc_only=False):
         if deg % 90:
             raise ValueError(f"Rotations must be multiples of 90 degrees, got {deg}")
-        currOrient = self.getOrientation()
-        currRot, currMirror = self._rotations[currOrient]
-        _, newRot = divmod(currRot + deg, 360)
-        newOrient = self._invertedRotations[(newRot, currMirror)]
+        curr_orient = self.get_orientation_tag()
+        curr_rot, curr_mirror = self._rotations[curr_orient]
+        _, new_rot = divmod(curr_rot + deg, 360)
+        new_orient = self._inverted_rotations[(new_rot, curr_mirror)]
         if calc_only:
-            return newOrient
-        self.setOrientation(newOrient)
+            return new_orient
+        self.set_orientation(new_orient)
         return None
 
-    def mirrorVertically(self):
+    def mirror_vertically(self):
         """Flips the image top to bottom."""
         # First, rotate 180
-        currOrient = self.rotateCW(2, calc_only=True)
-        currRot, currMirror = self._rotations[currOrient]
-        newMirror = currMirror ^ 1
-        newOrient = self._invertedRotations[(currRot, newMirror)]
-        self.setOrientation(newOrient)
+        curr_orient = self.rotate_CW(2, calc_only=True)
+        curr_rot, curr_mirror = self._rotations[curr_orient]
+        new_mirror = curr_mirror ^ 1
+        new_orient = self._inverted_rotations[(curr_rot, new_mirror)]
+        self.set_orientation(new_orient)
 
-    def mirrorHorizontally(self):
+    def mirror_horizontally(self):
         """Flips the image left to right."""
-        currOrient = self.getOrientation()
-        currRot, currMirror = self._rotations[currOrient]
-        newMirror = currMirror ^ 1
-        newOrient = self._invertedRotations[(currRot, newMirror)]
-        self.setOrientation(newOrient)
+        curr_orient = self.get_orientation_tag()
+        curr_rot, curr_mirror = self._rotations[curr_orient]
+        new_mirror = curr_mirror ^ 1
+        new_orient = self._inverted_rotations[(curr_rot, new_mirror)]
+        self.set_orientation(new_orient)
 
-    def setOrientation(self, val):
+    def set_orientation(self, val):
         """Orientation codes:
            Rot    Img
         1:   0    Normal
@@ -140,14 +144,14 @@ class ExifEditor:
         7: -90    Mirrored
         8: -90    Normal
         """
-        cmd = f"""exiftool {self._optExpr} -Orientation#='{val}' "{self.photo}" """
+        cmd = f"""exiftool {self._opt_expr} -Orientation#='{val}' "{self.photo}" """
         _runproc(cmd, fpath=self.photo)
 
-    def addKeyword(self, kw):
+    def add_keyword(self, kw):
         """Add the passed string to the image's keyword tag, preserving existing keywords."""
-        self.addKeywords([kw])
+        self.add_keywords([kw])
 
-    def addKeywords(self, kws):
+    def add_keywords(self, kws):
         """Add the passed list of strings to the image's keyword tag, preserving existing keywords."""
 
         def esc_space(val):
@@ -155,48 +159,48 @@ class ExifEditor:
 
         kws = [f"-iptc:keywords+={esc_space(kw)}" for kw in kws]
         kwopt = " ".join(kws)
-        cmd = f'exiftool {self._optExpr} {kwopt} "{self.photo}" '
+        cmd = f'exiftool {self._opt_expr} {kwopt} "{self.photo}" '
         _runproc(cmd, fpath=self.photo)
 
-    def getKeywords(self):
+    def get_keywords(self):
         """Returns the current keywords for the image as a list."""
-        ret = self.getTag("Keywords")
+        ret = self.get_tag("Keywords")
         if not ret:
             return []
         if isinstance(ret, str):
             return [ret]
         return sorted([str(kw) for kw in ret])
 
-    def setKeywords(self, kws):
+    def set_keywords(self, kws):
         """Sets the image's keyword list to the passed list of strings. Any existing keywords are
         overwritten.
         """
-        self.clearKeywords()
-        self.addKeywords(kws)
+        self.clear_keywords()
+        self.add_keywords(kws)
 
-    def clearKeywords(self):
+    def clear_keywords(self):
         """Removes all keywords from the image."""
-        self.setTag("Keywords", "")
+        self.set_tag("Keywords", "")
 
-    def removeKeyword(self, kw):
+    def remove_keyword(self, kw):
         """Remove a single keyword from the image. If the keyword does not exist, this call is a
         no-op.
         """
-        self.removeKeywords([kw])
+        self.remove_keywords([kw])
 
-    def removeKeywords(self, kws):
+    def remove_keywords(self, kws):
         """Removes multiple keywords from the image. If any keyword does not exist, it is
         ignored.
         """
-        curr = self.getKeywords()
+        curr = self.get_keywords()
         for kw in kws:
             try:
                 curr.remove(kw)
             except ValueError:
                 pass
-        self.setKeywords(curr)
+        self.set_keywords(curr)
 
-    def getTag(self, tag, default=None):
+    def get_tag(self, tag, default=None):
         """Returns the value of 'tag', or the default value if the tag does not exist."""
         cmd = f'exiftool -j -d "%Y:%m:%d %H:%M:%S" -{tag} "{self.photo}" '
         out = _runproc(cmd, fpath=self.photo)
@@ -204,7 +208,7 @@ class ExifEditor:
         ret = info.get(tag, default)
         return ret
 
-    def getTags(self, just_names=False, include_empty=True):
+    def get_tags(self, just_names=False, include_empty=True):
         """Returns a list of all the tags for the current image."""
         cmd = f'exiftool -j -d "%Y:%m:%d %H:%M:%S" "{self.photo}" '
         out = _runproc(cmd, fpath=self.photo)
@@ -222,14 +226,14 @@ class ExifEditor:
                 ret = [(tag, val) for tag, val in info.items() if val]
         return sorted(ret)
 
-    def getDictTags(self, include_empty=True):
+    def get_dict_tags(self, include_empty=True):
         """Returns a dict of all the tags for the current image, with the tag name as the key and
         the tag value as the value.
         """
-        tags = self.getTags(include_empty=include_empty)
+        tags = self.get_tags(include_empty=include_empty)
         return dict(tags)
 
-    def setTag(self, tag, val):
+    def set_tag(self, tag, val):
         """Sets the specified tag to the passed value. You can set multiple values for the same tag
         by passing those values in as a list.
         """
@@ -241,17 +245,17 @@ class ExifEditor:
 
         vallist = [f'-{tag}="{esc_quote(v)}"' for v in val]
         valstr = " ".join(vallist)
-        cmd = f'exiftool {self._optExpr} {valstr} "{self.photo}" '
+        cmd = f'exiftool {self._opt_expr} {valstr} "{self.photo}" '
         try:
             _runproc(cmd, fpath=self.photo)
         except RuntimeError as e:
             err = f"{e}".strip()
-            if self._badTagPat.match(err):
+            if self._bad_tag_pat.match(err):
                 print(f"Tag '{tag}' is invalid.")
             else:
                 raise
 
-    def setTags(self, tags_dict):
+    def set_tags(self, tags_dict):
         """Sets the specified tags_dict ({tag: val, tag_n: val_n}) tag value combinations. Used to
         set more than one tag, val value in a single call.
         """
@@ -265,45 +269,45 @@ class ExifEditor:
                 val = val.replace('"', '\\"')
             vallist.append(f'-{tag}="{val}"')
         valstr = " ".join(vallist)
-        cmd = f'exiftool {self._optExpr} {valstr} "{self.photo}" '
+        cmd = f'exiftool {self._opt_expr} {valstr} "{self.photo}" '
         try:
             _runproc(cmd, fpath=self.photo)
         except RuntimeError as e:
             err = f"{e}".strip()
-            if self._badTagPat.match(err):
+            if self._bad_tag_pat.match(err):
                 print(f"Tag '{tag}' is invalid.")
             else:
                 raise
 
-    def getOriginalDateTime(self):
+    def get_original_date_time(self):
         """Get the image's original date/time value (i.e., when the picture was 'taken')."""
-        return self._getDateTimeField("DateTimeOriginal")
+        return self._get_date_time_field("DateTimeOriginal")
 
-    def setOriginalDateTime(self, dttm=None):
+    def set_original_date_time(self, dttm=None):
         """Set the image's original date/time (i.e., when the picture was 'taken') to the passed
         value. If no value is passed, set it to the current datetime.
         """
-        self._setDateTimeField("DateTimeOriginal", dttm)
+        self._set_date_time_field("DateTimeOriginal", dttm)
 
-    def getModificationDateTime(self):
+    def get_modification_date_time(self):
         """Get the image's modification date/time value."""
-        return self._getDateTimeField("FileModifyDate")
+        return self._get_date_time_field("FileModifyDate")
 
-    def setModificationDateTime(self, dttm=None):
+    def set_modification_date_time(self, dttm=None):
         """Set the image's modification date/time to the passed value. If no value is passed, set
         it to the current datetime (i.e., like 'touch'.
         """
-        self._setDateTimeField("FileModifyDate", dttm)
+        self._set_date_time_field("FileModifyDate", dttm)
 
-    def _getDateTimeField(self, fld):
+    def _get_date_time_field(self, fld):
         """Generic getter for datetime values."""
-        ret = self.getTag(fld)
+        ret = self.get_tag(fld)
         if ret is not None:
             # It will be a string in exif std datetime format
             ret = datetime.datetime.strptime(ret, "%Y:%m:%d %H:%M:%S")
         return ret
 
-    def _setDateTimeField(self, fld, dttm):
+    def _set_date_time_field(self, fld, dttm):
         """Generic setter for datetime values."""
         if dttm is None:
             dttm = datetime.datetime.now()
@@ -311,21 +315,50 @@ class ExifEditor:
         if isinstance(dttm, (datetime.datetime, datetime.date)):
             dtstring = dttm.strftime("%Y:%m:%d %H:%M:%S")
         else:
-            dtstring = self._formatDateTime(dttm)
-        cmd = f"""exiftool {self._optExpr} -{fld}='{dtstring}' "{self.photo}" """
+            dtstring = self._format_date_time(dttm)
+        cmd = f"""exiftool {self._opt_expr} -{fld}='{dtstring}' "{self.photo}" """
         _runproc(cmd, fpath=self.photo)
 
-    def _formatDateTime(self, dt):
+    def _format_date_time(self, dt):
         """Accepts a string representation of a date or datetime, and returns a string correctly
         formatted for EXIF datetimes.
         """
-        if self._datePattern.match(dt):
+        if self._date_pattern.match(dt):
             # Add the time portion
             return f"{dt} 00:00:00"
-        if self._dateTimePattern.match(dt):
+        if self._date_time_pattern.match(dt):
             # Leave as-is
             return dt
         raise ValueError(f"Incorrect datetime value '{dt}' received") from None
+
+    # Compatibility with previous versions. If you have code that used method names with the older,
+    # non-Pythonic names, these will ensure that it continues to work
+    # pylint: disable=
+    rotateCCW = rotate_CCW
+    rotateCW = rotate_CW
+    getOrientation = get_orientation_tag
+    mirrorVertically = mirror_vertically
+    mirrorHorizontally = mirror_horizontally
+    setOrientation = set_orientation
+    addKeyword = add_keyword
+    addKeywords = add_keywords
+    getKeywords = get_keywords
+    setKeywords = set_keywords
+    clearKeywords = clear_keywords
+    removeKeyword = remove_keyword
+    removeKeywords = remove_keywords
+    getTag = get_tag
+    getTags = get_tags
+    getDictTags = get_dict_tags
+    setTag = set_tag
+    setTags = set_tags
+    getOriginalDateTime = get_original_date_time
+    setOriginalDateTime = set_original_date_time
+    getModificationDateTime = get_modification_date_time
+    setModificationDateTime = set_modification_date_time
+    _getDateTimeField = _get_date_time_field
+    _setDateTimeField = _set_date_time_field
+    _formatDateTime = _format_date_time
 
 
 def usage():

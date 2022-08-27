@@ -22,39 +22,39 @@ Common Actions
 
 Keyword Manipulation
 ====================
-    getKeywords(): returns a list of all keywords.
-    setKeywords(list of keywords): accepts a list of strings, and sets
+    get_keywords(): returns a list of all keywords.
+    set_keywords(list of keywords): accepts a list of strings, and sets
         the keywords for that image to that list. Any existing keywords
         are overwritten.
-    addKeyword(word): Appends the passed keyword to the image's
+    add_keyword(word): Appends the passed keyword to the image's
         keywords.
-    addKeyword(list of words): Convenience method for adding several
+    add_keyword(list of words): Convenience method for adding several
         keywords at once.
-    clearKeywords(): Removes all current keywords.
+    clear_keywords(): Removes all current keywords.
 
 Date Functions
 ==============
-    getOriginalDateTime(): Returns the datetime for the image's creation,
+    get_original_date_time(): Returns the datetime for the image's creation,
 		or None if not set.
-    setOriginalDateTime(dttm): Sets the image's original datetime to the
+    set_original_date_time(dttm): Sets the image's original datetime to the
         passed datetime value.
-    getModificationDateTime(): Returns the modification datetime for the
+    get_modification_date_time(): Returns the modification datetime for the
 		image, or None if not set.
-    setModificationDateTime(dttm): Sets the image's modification
+    set_modification_date_time(dttm): Sets the image's modification
         datetime to the passed datetime value.
 
 
 Image Manipulation
 ==================
-    rotateCW(num=1): Rotates the image clockwise for 'num' 90-degree
+    rotate_CW(num=1): Rotates the image clockwise for 'num' 90-degree
         steps.
-    rotateCCW(num=1): Rotates the image counter-clockwise for 'num'
+    rotate_CCW(num=1): Rotates the image counter-clockwise for 'num'
         90-degree steps.
-    mirrorVertically(): Flips the image top to bottom.
-    mirrorHorizontally: Flips the image left to right.
+    mirror_vertically(): Flips the image top to bottom.
+    mirror_horizontally: Flips the image left to right.
 
 Tag Manipulation
 ================
-    getTag(tag): returns the current value of the specified tag, or None
+    get_tag(tag): returns the current value of the specified tag, or None
         if the tag does not exist.
-    setTag(tag, val): sets the specified tag to the specified value.
+    set_tag(tag, val): sets the specified tag to the specified value.
