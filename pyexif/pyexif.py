@@ -5,8 +5,9 @@ import copy
 import datetime
 import json
 import re
+import warnings
 from subprocess import Popen, PIPE
-
+from typing import List, Union
 
 INSTALL_EXIFTOOL_INFO = """
 Cannot find 'exiftool'.
@@ -19,14 +20,14 @@ https://exiftool.org
 """
 
 
-def _runproc(cmd, fpath=None, wait=True, retry=True):
+def _runproc(cmd: List[str], fpath=None, wait: bool = True, retry: bool = True):
     """Runs the specified `cmd` in a separate process. If `wait` is False, returns the process
     immediately. If `wait` is True, it waits for the process to complete, and returns the content of
     stdout.
     """
     kwargs = dict(stdin=PIPE, stdout=PIPE, stderr=PIPE) if wait else {}
     # pylint: disable=consider-using-with
-    proc = Popen(cmd, shell=True, close_fds=True, **kwargs)
+    proc = Popen(cmd, shell=False, close_fds=True, **kwargs)
     if wait:
         stdout_bytes, stderr_bytes = proc.communicate()
         stdout = stdout_bytes.decode("utf-8")
@@ -35,8 +36,8 @@ def _runproc(cmd, fpath=None, wait=True, retry=True):
             # See if it's a damaged EXIF directory. If so, fix it and re-try
             if stderr.startswith("Warning: Bad ExifIFD directory") and fpath is not None and retry:
                 fixcmd = (
-                    "exiftool -overwrite_original_in_place -all= -tagsfromfile @ -all:all "
-                    f'-unsafe "{fpath}"'
+                    *"exiftool -overwrite_original_in_place -all= -tagsfromfile @ -all:all -unsafe".split(),
+                    f"{fpath}",
                 )
                 try:
                     _runproc(fixcmd, retry=False)
@@ -57,15 +58,19 @@ def _runproc(cmd, fpath=None, wait=True, retry=True):
 
 
 class ExifEditor:
-    def __init__(self, photo=None, save_backup=False, extra_opts=None):
+    def __init__(self, photo=None, save_backup=False, extra_opts: Union[List[str], str, None] = None):
         self.save_backup = save_backup
-        extra_opts = extra_opts or []
-        if isinstance(extra_opts, str):
+        if not extra_opts:
+            extra_opts = []
+        elif isinstance(extra_opts, str):
             extra_opts = [extra_opts]
-        ops = copy.deepcopy(extra_opts)
+            _msg = "It's strongly recommended to parse a list instead of a string to avoid ambiguous characters in command line arguments."
+            warnings.warn(UserWarning(_msg))
+
+        self.ops = copy.deepcopy(extra_opts)
         if not save_backup:
-            ops.append("-overwrite_original_in_place")
-        self._opt_expr = " ".join(ops)
+            self.ops.append("-overwrite_original_in_place")
+
         if isinstance(photo, bytes):
             photo = photo.decode("utf-8")
         self.photo = photo
@@ -144,7 +149,7 @@ class ExifEditor:
         7: -90    Mirrored
         8: -90    Normal
         """
-        cmd = f"""exiftool {self._opt_expr} -Orientation#='{val}' "{self.photo}" """
+        cmd = ["exiftool", *self.ops, f"-Orientation#={val}", f"{self.photo}"]
         _runproc(cmd, fpath=self.photo)
 
     def add_keyword(self, kw):
@@ -153,13 +158,8 @@ class ExifEditor:
 
     def add_keywords(self, kws):
         """Add the passed list of strings to the image's keyword tag, preserving existing keywords."""
-
-        def esc_space(val):
-            return val.replace(" ", r"\ ").replace("&", r"\&")
-
-        kws = [f"-iptc:keywords+={esc_space(kw)}" for kw in kws]
-        kwopt = " ".join(kws)
-        cmd = f'exiftool {self._opt_expr} {kwopt} "{self.photo}" '
+        kws = [f"-iptc:keywords+={kw}" for kw in kws]
+        cmd = ["exiftool", *self.ops, *kws, f"{self.photo}"]
         _runproc(cmd, fpath=self.photo)
 
     def get_keywords(self):
@@ -202,7 +202,7 @@ class ExifEditor:
 
     def get_tag(self, tag, default=None):
         """Returns the value of 'tag', or the default value if the tag does not exist."""
-        cmd = f'exiftool -j -d "%Y:%m:%d %H:%M:%S" -{tag} "{self.photo}" '
+        cmd = ["exiftool", "-j", "-d", "%Y:%m:%d %H:%M:%S", f"-{tag}", f"{self.photo}"]
         out = _runproc(cmd, fpath=self.photo)
         info = json.loads(out)[0]
         ret = info.get(tag, default)
@@ -210,7 +210,7 @@ class ExifEditor:
 
     def get_tags(self, just_names=False, include_empty=True):
         """Returns a list of all the tags for the current image."""
-        cmd = f'exiftool -j -d "%Y:%m:%d %H:%M:%S" "{self.photo}" '
+        cmd = ["exiftool", "-j", "-d", "%Y:%m:%d %H:%M:%S", f"{self.photo}"]
         out = _runproc(cmd, fpath=self.photo)
         info = json.loads(out)[0]
         if include_empty:
@@ -240,12 +240,8 @@ class ExifEditor:
         if not isinstance(val, (list, tuple)):
             val = [val]
 
-        def esc_quote(val):
-            return val.replace('"', '\\"') if isinstance(val, str) else val
-
-        vallist = [f'-{tag}="{esc_quote(v)}"' for v in val]
-        valstr = " ".join(vallist)
-        cmd = f'exiftool {self._opt_expr} {valstr} "{self.photo}" '
+        vallist = [f"-{tag}={v}" for v in val]
+        cmd = ["exiftool", *self.ops, *vallist, f"{self.photo}"]
         try:
             _runproc(cmd, fpath=self.photo)
         except RuntimeError as e:
@@ -264,12 +260,8 @@ class ExifEditor:
         vallist = []
         for tag in tags_dict:
             val = tags_dict[tag]
-            # escape double quotes in case of string type
-            if isinstance(val, str):
-                val = val.replace('"', '\\"')
-            vallist.append(f'-{tag}="{val}"')
-        valstr = " ".join(vallist)
-        cmd = f'exiftool {self._opt_expr} {valstr} "{self.photo}" '
+            vallist.append(f"-{tag}={val}")
+        cmd = ["exiftool", *self.ops, *vallist, f"{self.photo}"]
         try:
             _runproc(cmd, fpath=self.photo)
         except RuntimeError as e:
@@ -316,7 +308,7 @@ class ExifEditor:
             dtstring = dttm.strftime("%Y:%m:%d %H:%M:%S")
         else:
             dtstring = self._format_date_time(dttm)
-        cmd = f"""exiftool {self._opt_expr} -{fld}='{dtstring}' "{self.photo}" """
+        cmd = ["exiftool", *self.ops, f"-{fld}={dtstring}", f"{self.photo}"]
         _runproc(cmd, fpath=self.photo)
 
     def _format_date_time(self, dt):
@@ -359,6 +351,9 @@ class ExifEditor:
     _getDateTimeField = _get_date_time_field
     _setDateTimeField = _set_date_time_field
     _formatDateTime = _format_date_time
+    @property
+    def _opt_expr(self):
+        return " ".join(self.ops)
 
 
 def usage():
