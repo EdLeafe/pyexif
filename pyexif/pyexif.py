@@ -35,10 +35,10 @@ def _runproc(cmd: List[str], fpath=None, wait: bool = True, retry: bool = True):
         if stderr:
             # See if it's a damaged EXIF directory. If so, fix it and re-try
             if stderr.startswith("Warning: Bad ExifIFD directory") and fpath is not None and retry:
-                fixcmd = (
-                    *"exiftool -overwrite_original_in_place -all= -tagsfromfile @ -all:all -unsafe".split(),
-                    f"{fpath}",
+                whole_cmd = (
+                    "exiftool -overwrite_original_in_place -all= -tagsfromfile @ -all:all -unsafe"
                 )
+                fixcmd = (*whole_cmd.split(), f"{fpath}")
                 try:
                     _runproc(fixcmd, retry=False)
                 except RuntimeError:
@@ -58,7 +58,9 @@ def _runproc(cmd: List[str], fpath=None, wait: bool = True, retry: bool = True):
 
 
 class ExifEditor:
-    def __init__(self, photo=None, save_backup=False, extra_opts: Union[List[str], str, None] = None):
+    def __init__(
+        self, photo=None, save_backup=False, extra_opts: Union[List[str], str, None] = None
+    ):
         self.save_backup = save_backup
         if not extra_opts:
             extra_opts = []
@@ -351,6 +353,7 @@ class ExifEditor:
     _getDateTimeField = _get_date_time_field
     _setDateTimeField = _set_date_time_field
     _formatDateTime = _format_date_time
+
     @property
     def _opt_expr(self):
         return " ".join(self.ops)
