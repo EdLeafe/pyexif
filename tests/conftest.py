@@ -63,3 +63,7 @@ def random_bytes_factory():
 @pytest.fixture
 def print_mock(mocker):
     mocker.patch.object(builtins, "print")
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

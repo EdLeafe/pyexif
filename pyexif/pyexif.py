@@ -7,6 +7,7 @@ import json
 import re
 import warnings
 from subprocess import Popen, PIPE
+from typing import List, Union
 
 INSTALL_EXIFTOOL_INFO = """
 Cannot find 'exiftool'.
@@ -19,7 +20,7 @@ https://exiftool.org
 """
 
 
-def _runproc(cmd: list[str], fpath=None, wait: bool = True, retry: bool = True):
+def _runproc(cmd: List[str], fpath=None, wait: bool = True, retry: bool = True):
     """Runs the specified `cmd` in a separate process. If `wait` is False, returns the process
     immediately. If `wait` is True, it waits for the process to complete, and returns the content of
     stdout.
@@ -57,19 +58,19 @@ def _runproc(cmd: list[str], fpath=None, wait: bool = True, retry: bool = True):
 
 
 class ExifEditor:
-    def __init__(self, photo=None, save_backup=False, extra_opts: list[str] = None):
+    def __init__(self, photo=None, save_backup=False, extra_opts: Union[List[str], str, None] = None):
         self.save_backup = save_backup
-        extra_opts = extra_opts or []
-        if isinstance(extra_opts, str):
+        if not extra_opts:
+            extra_opts = []
+        elif isinstance(extra_opts, str):
             extra_opts = [extra_opts]
-            warnings.warn(
-                UserWarning(
-                    "It's strongly recommended to parse a list instead of a string to avoid ambiguous characters in command line arguments."
-                )
-            )
+            _msg = "It's strongly recommended to parse a list instead of a string to avoid ambiguous characters in command line arguments."
+            warnings.warn(UserWarning(_msg))
+
         self.ops = copy.deepcopy(extra_opts)
         if not save_backup:
             self.ops.append("-overwrite_original_in_place")
+
         if isinstance(photo, bytes):
             photo = photo.decode("utf-8")
         self.photo = photo
@@ -350,6 +351,9 @@ class ExifEditor:
     _getDateTimeField = _get_date_time_field
     _setDateTimeField = _set_date_time_field
     _formatDateTime = _format_date_time
+    @property
+    def _opt_expr(self):
+        return " ".join(self.ops)
 
 
 def usage():
